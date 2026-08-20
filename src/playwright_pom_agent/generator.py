@@ -10,7 +10,14 @@ from jinja2 import Environment, FileSystemLoader
 from .models import FormGroup, VerificationResult, VerifiedElement
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
-_env = Environment(loader=FileSystemLoader(str(_TEMPLATE_DIR)), trim_blocks=True, lstrip_blocks=True)
+# autoescape is intentionally off: this template renders Python source, not
+# HTML, and Jinja's HTML-escaping would corrupt every repr()-quoted string
+# literal in the output (e.g. turning ' into &#39;). The actual risk that
+# check is meant to catch - untrusted values landing unescaped in output -
+# is handled independently: identifiers are sanitized to [a-z0-9_] by
+# _to_snake_case, and every string value is escaped via Python's own repr()
+# in locator_spec.py, not by Jinja.
+_env = Environment(loader=FileSystemLoader(str(_TEMPLATE_DIR)), trim_blocks=True, lstrip_blocks=True)  # nosec B701
 
 
 def _to_snake_case(name: str) -> str:

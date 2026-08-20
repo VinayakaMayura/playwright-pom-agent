@@ -1,0 +1,40 @@
+name: Security scan
+
+on:
+  push:
+    branches: [main]
+  pull_request: {} # run for PRs against any base branch, not just main
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_call: {} # let other workflows (e.g. publish.yml) invoke this as a gate
+
+jobs:
+  bandit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Run Bandit (Python static security analysis)
+        # Scoped to src/ only - tests/ intentionally exec() generated code to
+        # verify it, which would otherwise show up as noise here.
+        run: uvx bandit -r src/ -ll
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install -e ".[anthropic,openai,dev]"
+          uv pip install pip-audit
+
+      - name: Run pip-audit (dependency vulnerability scan)
+        run: uv run pip-audit
